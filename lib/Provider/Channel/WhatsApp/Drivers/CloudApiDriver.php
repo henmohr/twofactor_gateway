@@ -80,12 +80,16 @@ class CloudApiDriver implements IWhatsAppDriver {
 				$phoneNumberId
 			);
 
+			// Use template message for test messages (more reliable)
 			$requestPayload = [
 				'messaging_product' => 'whatsapp',
 				'to' => $phoneNumber,
-				'type' => 'text',
-				'text' => [
-					'body' => $message,
+				'type' => 'template',
+				'template' => [
+					'name' => 'hello_world',
+					'language' => [
+						'code' => 'en_US',
+					],
 				],
 			];
 
