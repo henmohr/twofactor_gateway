@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace OCA\TwoFactorGateway\Controller;
 
+use OCA\TwoFactorGateway\Exception\MessageTransmissionException;
 use OCA\TwoFactorGateway\Provider\Channel\WhatsApp\Drivers\CloudApiDriver;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\ApiRoute;
@@ -209,6 +210,46 @@ class WhatsAppCloudApiConfigurationController extends Controller {
 		} catch (\Exception $e) {
 			$this->logger->error('Error retrieving WhatsApp webhook credentials', ['exception' => $e]);
 			return new DataResponse(['message' => 'Error retrieving webhook credentials'], 500);
+		}
+	}
+
+	/**
+	 * Send test WhatsApp message
+	 *
+	 * @return DataResponse
+	 */
+	#[ApiRoute(verb: 'POST', url: '/api/v1/whatsapp/send-test')]
+	public function sendTestMessage(
+		string $phone_number = '',
+		string $message = '',
+	): DataResponse {
+		try {
+			// Only admin can access
+			if (!$this->isAdmin()) {
+				return new DataResponse(['message' => 'Unauthorized'], 403);
+			}
+
+			// Validate inputs
+			if (empty($phone_number) || empty($message)) {
+				return new DataResponse([
+					'message' => 'Phone number and message are required',
+				], 400);
+			}
+
+			// Create CloudApiDriver and send test message
+			$driver = new CloudApiDriver($this->appConfig, $this->clientService, $this->logger);
+
+			try {
+				$driver->send($phone_number, $message);
+				return new DataResponse(['message' => 'Test message sent successfully'], 200);
+			} catch (MessageTransmissionException $e) {
+				return new DataResponse([
+					'message' => 'Failed to send test message: ' . $e->getMessage(),
+				], 400);
+			}
+		} catch (\Exception $e) {
+			$this->logger->error('Error sending test message', ['exception' => $e]);
+			return new DataResponse(['message' => 'Error sending test message'], 500);
 		}
 	}
 
