@@ -80,10 +80,27 @@ class CloudApiDriver implements IWhatsAppDriver {
 				$phoneNumberId
 			);
 
+			$requestPayload = [
+				'messaging_product' => 'whatsapp',
+				'to' => $phoneNumber,
+				'type' => 'text',
+				'text' => [
+					'body' => $message,
+				],
+			];
+
 			$this->logger->debug('Sending WhatsApp message', [
 				'url' => $url,
 				'to' => $phoneNumber,
 				'api_version' => self::API_VERSION,
+				'phone_number_id' => $phoneNumberId,
+				'api_endpoint' => $apiEndpoint,
+				'api_key_length' => strlen($apiKey),
+				'api_key_first_chars' => substr($apiKey, 0, 10) . '...',
+			]);
+
+			$this->logger->debug('Request payload', [
+				'payload_json' => json_encode($requestPayload),
 			]);
 
 			$response = $this->client->post($url, [
@@ -91,32 +108,38 @@ class CloudApiDriver implements IWhatsAppDriver {
 					'Authorization' => "Bearer $apiKey",
 					'Content-Type' => 'application/json',
 				],
-				'json' => [
-					'messaging_product' => 'whatsapp',
-					'to' => $phoneNumber,
-					'type' => 'text',
-					'text' => [
-						'body' => $message,
-					],
-				],
+				'json' => $requestPayload,
 			]);
 
 			$statusCode = $response->getStatusCode();
 			$responseBody = json_decode((string)$response->getBody(), true);
+			$rawResponseBody = (string)$response->getBody();
 
 			$this->logger->debug('WhatsApp API response', [
 				'status_code' => $statusCode,
 				'response_body' => $responseBody,
+				'raw_response' => $rawResponseBody,
 			]);
 
 			if ($statusCode >= 200 && $statusCode < 300) {
-				$this->logger->debug('WhatsApp message sent successfully', [
+				$this->logger->info('WhatsApp message sent successfully', [
 					'phone' => $phoneNumber,
 					'message_id' => $responseBody['messages'][0]['id'] ?? 'unknown',
+					'status_code' => $statusCode,
 				]);
 			} else {
+				$errorMessage = $responseBody['error']['message'] ?? 'Unknown error';
+				$this->logger->error('WhatsApp API error response', [
+					'status_code' => $statusCode,
+					'error_message' => $errorMessage,
+					'error_code' => $responseBody['error']['code'] ?? 'unknown',
+					'error_type' => $responseBody['error']['type'] ?? 'unknown',
+					'full_error' => $responseBody['error'] ?? $responseBody,
+					'phone_number' => $phoneNumber,
+					'phone_number_id' => $phoneNumberId,
+				]);
 				throw new MessageTransmissionException(
-					'Failed to send WhatsApp message: ' . ($responseBody['error']['message'] ?? 'Unknown error')
+					'Failed to send WhatsApp message: ' . $errorMessage
 				);
 			}
 		} catch (ConnectException $e) {
@@ -124,15 +147,20 @@ class CloudApiDriver implements IWhatsAppDriver {
 			throw new MessageTransmissionException('Failed to connect to WhatsApp API');
 		} catch (ClientException | ServerException $e) {
 			$errorMsg = 'Unknown error';
+			$errorBody = null;
 			try {
-				$body = json_decode((string)$e->getResponse()->getBody(), true);
-				$errorMsg = $body['error']['message'] ?? $body['message'] ?? $errorMsg;
+				$errorBody = json_decode((string)$e->getResponse()->getBody(), true);
+				$errorMsg = $errorBody['error']['message'] ?? $errorBody['message'] ?? $errorMsg;
 			} catch (\Exception) {
 				// Use default error message
 			}
-			$this->logger->error('WhatsApp API error', [
+			$this->logger->error('WhatsApp ClientException/ServerException', [
 				'status' => $e->getResponse()->getStatusCode() ?? 'unknown',
 				'error' => $errorMsg,
+				'error_body' => $errorBody,
+				'phone_number' => $phoneNumber ?? 'unknown',
+				'phone_number_id' => $phoneNumberId ?? 'unknown',
+				'exception_message' => $e->getMessage(),
 			]);
 			throw new MessageTransmissionException("WhatsApp API error: $errorMsg");
 		} catch (RequestException $e) {
