@@ -11,10 +11,15 @@ import path from 'path'
 const isProduction = process.env.NODE_ENV === 'production'
 
 export default createAppConfig({
-	main: path.join(__dirname, 'src', 'main.js'),
+        main: path.join(__dirname, 'src', 'main.js'),
 }, {
-	config: {
-		plugins: [eslint(), stylelint()],
-	},
-	minify: isProduction,
+        config: {
+                resolve: {
+                        alias: {
+                                'vue-material-design-icons': path.join(__dirname, 'src', 'icons', 'vue-material-design-icons'),
+                        },
+                },
+                plugins: [eslint(), stylelint()],
+        },
+        minify: isProduction,
 })
