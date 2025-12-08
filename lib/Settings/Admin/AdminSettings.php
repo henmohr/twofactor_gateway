@@ -23,6 +23,7 @@ class AdminSettings implements ISettings {
 	}
 
 	public function getForm(): TemplateResponse {
+		Util::addStyle('twofactor_gateway', 'twofactor_gateway');
 		Util::addScript('twofactor_gateway', 'whatsapp-settings-simple');
 
 		return new TemplateResponse('twofactor_gateway', 'admin_whatsapp_settings');
