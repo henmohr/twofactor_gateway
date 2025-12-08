@@ -12,6 +12,7 @@ namespace OCA\TwoFactorGateway\Controller;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\ApiRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\PublicPage;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\IAppConfig;
 use OCP\IRequest;
@@ -35,6 +36,7 @@ class WhatsAppWebhookController extends Controller {
 	 * @return DataResponse
 	 */
 	#[ApiRoute(verb: 'GET', url: '/api/v1/webhooks/whatsapp')]
+	#[PublicPage]
 	#[NoAdminRequired]
 	public function verify(
 		string $hub_mode = '',
@@ -67,6 +69,7 @@ class WhatsAppWebhookController extends Controller {
 	 * @return DataResponse
 	 */
 	#[ApiRoute(verb: 'POST', url: '/api/v1/webhooks/whatsapp')]
+	#[PublicPage]
 	#[NoAdminRequired]
 	public function webhook(): DataResponse {
 		try {
