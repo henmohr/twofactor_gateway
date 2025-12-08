@@ -63,8 +63,14 @@ class CloudApiDriver implements IWhatsAppDriver {
 
 			// Normaliza o número de telefone removendo caracteres especiais
 			$phoneNumber = preg_replace('/\D/', '', $recipient);
+			$this->logger->debug('Phone number normalization', [
+				'original' => $recipient,
+				'normalized' => $phoneNumber,
+				'length' => strlen($phoneNumber),
+			]);
+			
 			if (strlen($phoneNumber) < 10) {
-				throw new MessageTransmissionException('Invalid phone number format');
+				throw new MessageTransmissionException('Invalid phone number format: ' . $recipient . ' (normalized: ' . $phoneNumber . ')');
 			}
 
 			$url = sprintf(
@@ -73,6 +79,12 @@ class CloudApiDriver implements IWhatsAppDriver {
 				self::API_VERSION,
 				$phoneNumberId
 			);
+
+			$this->logger->debug('Sending WhatsApp message', [
+				'url' => $url,
+				'to' => $phoneNumber,
+				'api_version' => self::API_VERSION,
+			]);
 
 			$response = $this->client->post($url, [
 				'headers' => [
@@ -92,6 +104,11 @@ class CloudApiDriver implements IWhatsAppDriver {
 
 			$statusCode = $response->getStatusCode();
 			$responseBody = json_decode((string)$response->getBody(), true);
+
+			$this->logger->debug('WhatsApp API response', [
+				'status_code' => $statusCode,
+				'response_body' => $responseBody,
+			]);
 
 			if ($statusCode >= 200 && $statusCode < 300) {
 				$this->logger->debug('WhatsApp message sent successfully', [
