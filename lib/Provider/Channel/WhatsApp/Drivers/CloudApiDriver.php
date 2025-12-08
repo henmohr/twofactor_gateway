@@ -52,13 +52,17 @@ class CloudApiDriver implements IWhatsAppDriver {
 			$phoneNumberId = $this->getConfig('phone_number_id');
 			$apiKey = $this->getConfig('api_key');
 			$apiEndpoint = $this->getConfig('api_endpoint') ?? self::API_BASE_URL;
+			$phoneNumberForMessages = $this->getConfig('phone_number_fb');
 
 			if (!$phoneNumberId || !$apiKey) {
 				throw new ConfigurationException('Missing required Cloud API configuration');
 			}
 
+			// Usa o número configurado para mensagens ou o identifier fornecido
+			$recipient = $phoneNumberForMessages ?: $identifier;
+
 			// Normaliza o número de telefone removendo caracteres especiais
-			$phoneNumber = preg_replace('/\D/', '', $identifier);
+			$phoneNumber = preg_replace('/\D/', '', $recipient);
 			if (strlen($phoneNumber) < 10) {
 				throw new MessageTransmissionException('Invalid phone number format');
 			}
