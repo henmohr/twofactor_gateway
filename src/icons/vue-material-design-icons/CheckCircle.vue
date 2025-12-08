@@ -9,7 +9,7 @@
 		role="img"
 		aria-hidden="true"
 		class="mdi-icon">
-		<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+		<path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M10,16.5L5.5,12L6.91,10.58L10,13.67L17.09,6.58L18.5,8L10,16.5Z" />
 	</svg>
 </template>
 
@@ -17,7 +17,7 @@
 import { defineComponent } from 'vue'
 
 export default defineComponent({
-	name: 'Check',
+	name: 'CheckCircle',
 })
 </script>
 
