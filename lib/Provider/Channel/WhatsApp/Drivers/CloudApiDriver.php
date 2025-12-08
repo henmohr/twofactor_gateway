@@ -93,7 +93,6 @@ class CloudApiDriver implements IWhatsAppDriver {
 				],
 				'json' => [
 					'messaging_product' => 'whatsapp',
-					'recipient_type' => 'individual',
 					'to' => $phoneNumber,
 					'type' => 'text',
 					'text' => [
