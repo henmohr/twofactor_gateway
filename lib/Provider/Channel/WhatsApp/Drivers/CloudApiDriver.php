@@ -31,7 +31,7 @@ use Symfony\Component\Console\Helper\QuestionHelper;
  * Usa a API oficial v14.0+ do Meta Graph para enviar mensagens
  */
 class CloudApiDriver implements IWhatsAppDriver {
-	private const API_VERSION = 'v14.0';
+	private const API_VERSION = 'v22.0';
 	private const API_BASE_URL = 'https://graph.facebook.com';
 
 	private IClient $client;
