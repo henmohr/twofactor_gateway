@@ -103,21 +103,44 @@ class CloudApiDriver implements IWhatsAppDriver {
 				'api_key_first_chars' => substr($apiKey, 0, 10) . '...',
 			]);
 
+			$payloadJson = json_encode($requestPayload);
 			$this->logger->debug('Request payload', [
-				'payload_json' => json_encode($requestPayload),
+				'payload_json' => $payloadJson,
+			]);
+
+			$headers = [
+				'Authorization' => "Bearer $apiKey",
+				'Content-Type' => 'application/json',
+			];
+
+			$this->logger->info('HTTP Request Details', [
+				'method' => 'POST',
+				'url' => $url,
+				'headers' => [
+					'Authorization' => 'Bearer ' . substr($apiKey, 0, 10) . '...',
+					'Content-Type' => 'application/json',
+				],
+				'body' => $payloadJson,
+				'body_length' => strlen($payloadJson),
 			]);
 
 			$response = $this->client->post($url, [
-				'headers' => [
-					'Authorization' => "Bearer $apiKey",
-					'Content-Type' => 'application/json',
-				],
+				'headers' => $headers,
 				'json' => $requestPayload,
 			]);
 
 			$statusCode = $response->getStatusCode();
-			$responseBody = json_decode((string)$response->getBody(), true);
 			$rawResponseBody = (string)$response->getBody();
+			$responseBody = json_decode($rawResponseBody, true);
+
+			$this->logger->info('HTTP Response received', [
+				'status_code' => $statusCode,
+				'response_body' => $responseBody,
+				'raw_response' => $rawResponseBody,
+				'response_headers' => [
+					'Content-Type' => $response->getHeader('Content-Type'),
+				],
+			]);
 
 			$this->logger->debug('WhatsApp API response', [
 				'status_code' => $statusCode,
