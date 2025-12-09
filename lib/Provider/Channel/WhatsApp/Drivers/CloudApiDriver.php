@@ -58,8 +58,9 @@ class CloudApiDriver implements IWhatsAppDriver {
 				throw new ConfigurationException('Missing required Cloud API configuration');
 			}
 
-			// Usa o número configurado para mensagens ou o identifier fornecido
-			$recipient = $phoneNumberForMessages ?: $identifier;
+			// Use the identifier (phone number) provided in the parameter
+			// This allows using different numbers for test messages
+			$recipient = $identifier;
 
 			// Normaliza o número de telefone removendo caracteres especiais
 			$phoneNumber = preg_replace('/\D/', '', $recipient);
