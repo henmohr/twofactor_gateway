@@ -17,6 +17,9 @@ A set of Nextcloud two-factor providers to send authentication codes via Signal,
 This app uses external messaging gateway services for sending the code. See the
 [admin documentation] on how to configure the specific providers.
 
+## WhatsApp integration [under development]
+- <img width="720" height="878" alt="image" src="https://github.com/user-attachments/assets/8edc34bd-5809-4f67-b3cc-fbf78a6d9d12" />
+
 ## Login with external apps
 All modern applications communicating with Nextcloud now use Login flow so you
 will be able to log in just like you would on the web, including, but not
