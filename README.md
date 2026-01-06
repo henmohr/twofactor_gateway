@@ -18,7 +18,7 @@ This app uses external messaging gateway services for sending the code. See the
 [admin documentation] on how to configure the specific providers.
 
 ## WhatsApp integration [under development]
-- <img width="720" height="878" alt="image" src="https://github.com/user-attachments/assets/8edc34bd-5809-4f67-b3cc-fbf78a6d9d12" />
+- <img width="668" height="874" alt="image" src="https://github.com/user-attachments/assets/8f649305-072e-40df-a64c-e5ea80bbc2c3" />
 
 ## Login with external apps
 All modern applications communicating with Nextcloud now use Login flow so you
