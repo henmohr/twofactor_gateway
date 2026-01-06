@@ -117,6 +117,37 @@
 			{{ statusMessage }}
 		</NcNoteCard>
 
+		<!-- Template Verification Status -->
+		<div v-if="templateStatus.verified && isConfigured" class="template-status">
+			<h3>{{ t('twofactor_gateway', 'Template Verification') }}</h3>
+			<div class="checklist">
+				<div class="checklist-item" :class="{ success: templateStatus.exists, error: !templateStatus.exists }">
+					<span class="icon">{{ templateStatus.exists ? '✓' : '✗' }}</span>
+					<div class="checklist-content">
+						<strong>{{ t('twofactor_gateway', 'Template "request_signature"') }}</strong>
+						<p v-if="templateStatus.exists && templateStatus.template">
+							{{ t('twofactor_gateway', 'Status:') }} {{ templateStatus.template.status }}<br>
+							{{ t('twofactor_gateway', 'Language:') }} {{ templateStatus.template.language }}<br>
+							{{ t('twofactor_gateway', 'Category:') }} {{ templateStatus.template.category }}
+						</p>
+						<p v-else>
+							{{ t('twofactor_gateway', 'Template not found. Please create it in Meta Business Manager.') }}
+						</p>
+					</div>
+				</div>
+			</div>
+			<NcButton
+				type="tertiary"
+				:disabled="isVerifyingTemplate"
+				@click="verifyTemplate">
+				<template #icon>
+					<NcLoadingIcon v-if="isVerifyingTemplate" :size="20" />
+					<CheckCircle v-else :size="20" />
+				</template>
+				{{ t('twofactor_gateway', 'Verify Template Again') }}
+			</NcButton>
+		</div>
+
 		<!-- Instruções de Configuração -->
 		<div v-if="!isConfigured" class="instructions">
 			<h3>{{ t('twofactor_gateway', 'How to Configure') }}</h3>
@@ -169,8 +200,19 @@ const initialData = ref({ ...formData.value })
 const isDirty = computed(() => JSON.stringify(formData.value) !== JSON.stringify(initialData.value))
 const isSaving = ref(false)
 const isTesting = ref(false)
+const isVerifyingTemplate = ref(false)
 const statusMessage = ref('')
 const statusType = ref<'success' | 'error' | 'warning' | 'info'>('info')
+const templateStatus = ref<{
+	exists: boolean
+	template?: {
+		name: string
+		status: string
+		language: string
+		category: string
+	}
+	verified: boolean
+}>({ exists: false, verified: false })
 
 const isConfigured = computed(() => formData.value.phoneNumberId && formData.value.apiKey && formData.value.businessAccountId)
 const isFormValid = computed(() => isConfigured.value)
@@ -215,6 +257,9 @@ async function save() {
 		statusMessage.value = t('twofactor_gateway', 'Configuration saved successfully')
 		statusType.value = 'success'
 		showSuccess(t('twofactor_gateway', 'WhatsApp configuration saved'))
+
+		// Verify template after saving
+		await verifyTemplate()
 	} catch (error) {
 		const errorMsg = error.response?.data?.ocs?.meta?.message || t('twofactor_gateway', 'Failed to save configuration')
 		statusMessage.value = errorMsg
@@ -251,6 +296,44 @@ async function testConfiguration() {
 		console.error('Error testing configuration:', error)
 	} finally {
 		isTesting.value = false
+	}
+}
+
+async function verifyTemplate() {
+	if (!isConfigured.value) return
+
+	isVerifyingTemplate.value = true
+
+	try {
+		const response = await axios.post(generateOcsUrl('/apps/twofactor_gateway/api/v1/whatsapp/verify-template'), {
+			template_name: 'request_signature',
+			phone_number_id: formData.value.phoneNumberId,
+			business_account_id: formData.value.businessAccountId,
+			api_key: formData.value.apiKey,
+			api_endpoint: formData.value.apiEndpoint || 'https://graph.facebook.com',
+		})
+
+		const data = response.data.ocs?.data || response.data
+		templateStatus.value = {
+			exists: data.exists,
+			template: data.template,
+			verified: true,
+		}
+
+		if (data.exists) {
+			showSuccess(t('twofactor_gateway', 'Template "request_signature" found and ready to use'))
+		} else {
+			showError(t('twofactor_gateway', 'Template "request_signature" not found. Please create it in Meta Business Manager'))
+		}
+	} catch (error) {
+		console.error('Error verifying template:', error)
+		templateStatus.value = {
+			exists: false,
+			verified: true,
+		}
+		showError(t('twofactor_gateway', 'Failed to verify template'))
+	} finally {
+		isVerifyingTemplate.value = false
 	}
 }
 
@@ -329,6 +412,73 @@ loadConfiguration()
 
 	.status-message {
 		margin-bottom: 20px;
+	}
+
+	.template-status {
+		background: var(--color-background-secondary);
+		border-radius: 8px;
+		padding: 20px;
+		margin-bottom: 20px;
+
+		h3 {
+			margin-bottom: 15px;
+			font-size: 1.1rem;
+			font-weight: 600;
+		}
+
+		.checklist {
+			margin-bottom: 15px;
+
+			.checklist-item {
+				display: flex;
+				align-items: flex-start;
+				gap: 10px;
+				padding: 10px;
+				border-radius: 4px;
+				margin-bottom: 10px;
+
+				&.success {
+					background: rgba(70, 180, 70, 0.1);
+					border-left: 3px solid #46b450;
+
+					.icon {
+						color: #46b450;
+					}
+				}
+
+				&.error {
+					background: rgba(220, 53, 69, 0.1);
+					border-left: 3px solid #dc3545;
+
+					.icon {
+						color: #dc3545;
+					}
+				}
+
+				.icon {
+					font-size: 20px;
+					font-weight: bold;
+					min-width: 24px;
+					text-align: center;
+				}
+
+				.checklist-content {
+					flex: 1;
+
+					strong {
+						display: block;
+						margin-bottom: 5px;
+					}
+
+					p {
+						margin: 0;
+						font-size: 0.9rem;
+						color: var(--color-text-maxcontrast);
+						line-height: 1.5;
+					}
+				}
+			}
+		}
 	}
 
 	.instructions {

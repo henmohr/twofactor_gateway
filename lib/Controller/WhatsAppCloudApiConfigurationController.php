@@ -179,6 +179,105 @@ class WhatsAppCloudApiConfigurationController extends Controller {
 	}
 
 	/**
+	 * Verify if template exists in Meta
+	 *
+	 * @return DataResponse
+	 */
+	#[ApiRoute(verb: 'POST', url: '/api/v1/whatsapp/verify-template')]
+	public function verifyTemplate(
+		string $template_name = 'request_signature',
+		string $phone_number_id = '',
+		string $business_account_id = '',
+		string $api_key = '',
+		string $api_endpoint = '',
+	): DataResponse {
+		try {
+			// Only admin can access
+			if (!$this->isAdmin()) {
+				return new DataResponse(['message' => 'Unauthorized'], 403);
+			}
+
+			// Use provided values or fall back to stored config
+			if (empty($business_account_id)) {
+				$business_account_id = $this->appConfig->getValueString('twofactor_gateway', 'whatsapp_cloud_business_account_id', '');
+			}
+
+			if (empty($api_key)) {
+				$api_key = $this->appConfig->getValueString('twofactor_gateway', 'whatsapp_cloud_api_key', '');
+			}
+
+			if (empty($business_account_id) || empty($api_key)) {
+				return new DataResponse([
+					'message' => 'Business Account ID and API Key are required',
+				], 400);
+			}
+
+			$endpoint = $api_endpoint ?: $this->appConfig->getValueString('twofactor_gateway', 'whatsapp_cloud_api_endpoint', 'https://graph.facebook.com');
+			$client = $this->clientService->newClient();
+
+			// Get message templates from Meta
+			$url = sprintf('%s/v14.0/%s/message_templates', rtrim($endpoint, '/'), $business_account_id);
+
+			try {
+				$response = $client->get($url, [
+					'headers' => [
+						'Authorization' => "Bearer $api_key",
+					],
+				]);
+
+				if ($response->getStatusCode() !== 200) {
+					return new DataResponse([
+						'message' => 'Failed to fetch templates from Meta',
+					], 400);
+				}
+
+				$data = json_decode((string)$response->getBody(), true);
+				$templates = $data['data'] ?? [];
+
+				// Search for the specific template
+				$templateFound = false;
+				$templateDetails = null;
+
+				foreach ($templates as $template) {
+					if (($template['name'] ?? '') === $template_name) {
+						$templateFound = true;
+						$templateDetails = [
+							'name' => $template['name'] ?? '',
+							'status' => $template['status'] ?? '',
+							'language' => $template['language'] ?? '',
+							'category' => $template['category'] ?? '',
+						];
+						break;
+					}
+				}
+
+				if ($templateFound) {
+					$this->logger->info('Template found', ['template' => $template_name, 'details' => $templateDetails]);
+					return new DataResponse([
+						'exists' => true,
+						'template' => $templateDetails,
+						'message' => 'Template exists',
+					], 200);
+				}
+
+				$this->logger->warning('Template not found', ['template' => $template_name]);
+				return new DataResponse([
+					'exists' => false,
+					'message' => 'Template not found',
+				], 200);
+			} catch (\Exception $e) {
+				$this->logger->error('Failed to verify template', ['exception' => $e]);
+				return new DataResponse([
+					'message' => 'Failed to verify template: ' . $e->getMessage(),
+				], 400);
+			}
+		} catch (\Exception $e) {
+			$this->logger->error('Error verifying template', ['exception' => $e]);
+			return new DataResponse(['message' => 'Error verifying template'], 500);
+		}
+	}
+
+	/**
 	 * Get WhatsApp webhook credentials
 	 *
 	 * @return DataResponse

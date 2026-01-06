@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace OCA\TwoFactorGateway\Controller;
 
+use OCA\TwoFactorGateway\Service\WhatsApp\WebhookProcessorService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\ApiRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -22,6 +23,7 @@ class WhatsAppWebhookController extends Controller {
 		IRequest $request,
 		private IAppConfig $appConfig,
 		private LoggerInterface $logger,
+		private WebhookProcessorService $webhookProcessor,
 	) {
 		parent::__construct('twofactor_gateway', $request);
 	}
@@ -64,6 +66,23 @@ class WhatsAppWebhookController extends Controller {
 	/**
 	 * Handle incoming webhook messages (Facebook sends POST requests)
 	 *
+	 * Webhook structure:
+	 * {
+	 *   "object": "whatsapp_business_account",
+	 *   "entry": [{
+	 *     "id": "PHONE_NUMBER_ID",
+	 *     "changes": [{
+	 *       "value": {
+	 *         "messaging_product": "whatsapp",
+	 *         "metadata": {...},
+	 *         "messages": [...],
+	 *         "statuses": [...]
+	 *       },
+	 *       "field": "messages"
+	 *     }]
+	 *   }]
+	 * }
+	 *
 	 * @return DataResponse
 	 */
 	#[ApiRoute(verb: 'POST', url: '/api/v1/webhooks/whatsapp')]
@@ -72,17 +91,24 @@ class WhatsAppWebhookController extends Controller {
 		try {
 			$body = $this->request->getParams();
 
-			// Log the webhook payload
-			$this->logger->debug('WhatsApp webhook received', ['payload' => $body]);
+			// Log the webhook payload (truncated for security)
+			$this->logger->debug('WhatsApp webhook received', [
+				'object' => $body['object'] ?? 'unknown',
+				'has_messages' => !empty($body['entry'][0]['changes'][0]['value']['messages']),
+				'has_statuses' => !empty($body['entry'][0]['changes'][0]['value']['statuses']),
+			]);
 
-			// TODO: Process incoming messages from WhatsApp
-			// This is where you would handle message status updates, incoming messages, etc.
+			// Processar webhook via serviço
+			$this->webhookProcessor->processWebhook($body);
 
-			// Facebook requires a 200 response quickly
+			// Facebook requer resposta 200 rápida para confirmar recebimento
 			return new DataResponse(['success' => true], 200);
 		} catch (\Exception $e) {
-			$this->logger->error('Error processing webhook', ['exception' => $e]);
-			return new DataResponse(['success' => false], 500);
+			$this->logger->error('Error processing webhook', [
+				'exception' => $e->getMessage(),
+			]);
+			// Retorna 200 mesmo em caso de erro para não ficar retentando
+			return new DataResponse(['success' => false], 200);
 		}
 	}
 }
