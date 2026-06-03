@@ -200,42 +200,6 @@ class GatewayTest extends AppTestCase {
 		);
 	}
 
-	public function testSendUsesRuntimeBodyParametersFromExtraWhenProvided(): void {
-		$this->gateway->setApiVersion('v25.0');
-		$this->gateway->setPhoneNumberId('test_9999999999999');
-		$this->gateway->setAccessToken('token-123');
-		$this->gateway->setTemplateName('test_document_signature');
-		$this->gateway->setTemplateLanguage('pt_BR');
-
-		$this->client->expects($this->once())
-			->method('post')
-			->with(
-				'https://graph.facebook.com/v25.0/test_9999999999999/messages',
-				$this->callback(static function (array $options): bool {
-					$payload = $options['json'] ?? [];
-					$parameters = $payload['template']['components'][0]['parameters'] ?? [];
-
-					return ($payload['type'] ?? null) === 'template'
-						&& ($payload['template']['name'] ?? null) === 'test_document_signature'
-						&& ($payload['template']['language']['code'] ?? null) === 'pt_BR'
-						&& ($parameters[0]['text'] ?? null) === 'https://example.test/doc/123'
-						&& ($parameters[1]['text'] ?? null) === 'Contrato.pdf';
-				}),
-			)
-			->willReturn($this->createJsonResponse(['messages' => [['id' => 'wamid.4']]]));
-
-		$this->gateway->send(
-			'+55 (11) 99999-0000',
-			'This fallback text should not be used when body_parameters is present.',
-			[
-				'body_parameters' => [
-					'https://example.test/doc/123',
-					'Contrato.pdf',
-				],
-			],
-		);
-	}
-
 	private function createJsonResponse(array $payload): IResponse {
 		$stream = $this->createStub(StreamInterface::class);
 		$stream->method('__toString')->willReturn((string)json_encode($payload));

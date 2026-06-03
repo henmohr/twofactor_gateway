@@ -385,6 +385,44 @@ class AdminGatewayControllerTest extends TestCase {
 		$this->assertArrayNotHasKey('accountInfo', $response->getData());
 	}
 
+	public function testTestInstancePassesBodyParametersForWhatsAppBusiness(): void {
+		/** @var IGateway&MockObject $gateway */
+		$gateway = $this->createMock(IGateway::class);
+		$settings = new Settings(
+			name: 'WhatsApp Business',
+			id: 'whatsapp',
+			fields: [],
+		);
+		$gateway->method('getProviderId')->willReturn('whatsapp');
+		$gateway->method('getSettings')->willReturn($settings);
+		$gateway->method('isComplete')->willReturn(true);
+		$this->gatewayFactory->method('get')->with('whatsapp')->willReturn($gateway);
+		$record = [
+			'id' => 'abc',
+			'label' => 'WA Business',
+			'default' => true,
+			'createdAt' => '2026-01-01T00:00:00+00:00',
+			'config' => ['provider' => 'whatsappbusiness'],
+			'isComplete' => true,
+		];
+		$this->configService->method('getInstance')->with($gateway, 'abc')->willReturn($record);
+		$gateway->expects($this->once())
+			->method('send')
+			->with(
+				'+1234567890',
+				'Two Factor Gateway test message',
+				$this->callback(static function (array $extra): bool {
+					return ($extra['body_parameters'][0] ?? null) === 'https://example.invalid/libresign-test'
+						&& ($extra['body_parameters'][1] ?? null) === 'Two Factor Gateway test message';
+				}),
+			);
+
+		$response = $this->controller->testInstance('whatsapp', 'abc', '+1234567890');
+
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		$this->assertTrue($response->getData()['success']);
+	}
+
 	public function testTestInstanceIncludesAccountInfoWhenEnricherReturnsData(): void {
 		/** @var IGateway&ITestResultEnricher&MockObject $gateway */
 		$gateway = $this->createMockForIntersectionOfInterfaces([IGateway::class, ITestResultEnricher::class]);

@@ -290,7 +290,17 @@ class AdminGatewayController extends OCSController {
 		}
 
 		try {
-			$gatewayForTest->send($identifier, 'Two Factor Gateway test message');
+			$testMessage = 'Two Factor Gateway test message';
+			$testExtra = [];
+			if (($instanceConfig['provider'] ?? '') === 'whatsappbusiness') {
+				$testExtra = [
+					'body_parameters' => [
+						'https://example.invalid/libresign-test',
+						$testMessage,
+					],
+				];
+			}
+			$gatewayForTest->send($identifier, $testMessage, $testExtra);
 			$data = ['success' => true, 'message' => 'Test message sent successfully.'];
 
 			$gatewayForEnrichment = null;
