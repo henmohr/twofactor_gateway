@@ -131,12 +131,7 @@ class Gateway extends AGateway implements IConfigurationChangeAwareGateway, IInt
 			'components' => [
 				[
 					'type' => 'body',
-					'parameters' => [
-						[
-							'type' => 'text',
-							'text' => $message,
-						],
-					],
+					'parameters' => $this->resolveBodyParameters($extra, $message),
 				],
 			],
 		];
@@ -836,5 +831,49 @@ class Gateway extends AGateway implements IConfigurationChangeAwareGateway, IInt
 		} catch (\Throwable) {
 			return '';
 		}
+	}
+
+	/**
+	 * @return list<array{type: string, text: string}>
+	 */
+	private function resolveBodyParameters(array $extra, string $message): array {
+		$bodyParameters = $extra['body_parameters'] ?? null;
+		if (!is_array($bodyParameters) || $bodyParameters === []) {
+			return [
+				[
+					'type' => 'text',
+					'text' => $message,
+				],
+			];
+		}
+
+		$parameters = [];
+		foreach (array_values($bodyParameters) as $parameter) {
+			if (is_array($parameter)) {
+				$text = trim((string)($parameter['text'] ?? $parameter['value'] ?? ''));
+			} else {
+				$text = trim((string)$parameter);
+			}
+
+			if ($text === '') {
+				throw new MessageTransmissionException($this->l10n->t('WhatsApp Business body parameter cannot be empty.'));
+			}
+
+			$parameters[] = [
+				'type' => 'text',
+				'text' => $text,
+			];
+		}
+
+		if ($parameters === []) {
+			return [
+				[
+					'type' => 'text',
+					'text' => $message,
+				],
+			];
+		}
+
+		return $parameters;
 	}
 }
